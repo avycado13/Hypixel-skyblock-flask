@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    [NPC] Blacksmith: I'm the town Blacksmith! I can reforge items for you, for a price.<br>
+    Reforge used currently: {{ reforge }}
+    <form action="/blacksmith" method="POST">  
+        <input type="submit" value='Reforge'><br>
+    </form>
+    <a href="/start">Back</a>
+</body>
+</html>
