@@ -1,114 +1,125 @@
 from posixpath import join
-from cv2 import magnitude
-from django.shortcuts import render
-from django.template import base
-from flask import Flask, render_template, request, render_template, flash
+from flask import Flask, render_template, request, flash, session
 from flask_sqlalchemy import SQLAlchemy
-import random, time
-from matplotlib.pyplot import arrow
-
-from sqlalchemy import true
+import random
+import time
+import os
 
 app = Flask(__name__, static_url_path='/static')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+app.config['ADMIN_PW'] = os.urandom(8)
 db = SQLAlchemy(app)
 
-coins=100000000000
-bits=0
-combat_exp=0
-combat_level=0
-mining_exp=0
-mining_level=0
-foraging_exp=0
-foraging_level=0
-fishing_exp=0
-fishing_level=0
-enchanting_exp=0
-enchanting_level=0
-alchemy_exp=0
-alchemy_level=0
-farming_exp=0
-farming_level=0
-runecrafting_exp=0
-runecrafting_level=0
-taming_exp=0
-taming_level=0
-carpentry_exp=0
-carpentry_level=0
-social_exp=0
-social_level=0
-catacombs_exp=0
-catacombs_level=0
-grind_level=1
-base_health=100
-health=100
-base_defense=0
-defense=0
-truedefese=0
-base_strength=0
-strength=0
-critchance=0.3
-critdamage=1.5
-intellegence=0
-miningspeed=0
-seacreaturechance=0.2
-magicfind=0
-petluck=0
-abilitydamage=0
-ferocity=0
-miningfortune=0
-farmingfortune=0
-foragingfortune=0
-sword_used=None
-bow_used=None
-arrow_used=None
-arrow_bonus=0
-bpc=2000
-waiting=False
-rank='non'
-reforge = 'None'
-rarity = 0
-pickaxe=None
-pickaxe_speed=0
+# Define the User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    coins = db.Column(db.Float, default=100000000000)
+    bits = db.Column(db.Float, default=0)
+    rank = db.Column(db.String(20), default='non')
+    combat_exp = db.Column(db.Float, default=0)
+    combat_level = db.Column(db.Float, default=0)
+    mining_exp = db.Column(db.Float, default=0)
+    mining_level=db.Column(db.Float, default=0)
+    foraging_exp=db.Column(db.Float, default=0)
+    foraging_level=db.Column(db.Float, default=0)
+    fishing_exp=db.Column(db.Float, default=0)
+    fishing_level=db.Column(db.Float, default=0)
+    enchanting_exp=db.Column(db.Float, default=0)
+    enchanting_level=db.Column(db.Float, default=0)
+    alchemy_exp=db.Column(db.Float, default=0)
+    alchemy_level=db.Column(db.Float, default=0)
+    farming_exp=db.Column(db.Float, default=0)
+    farming_level=db.Column(db.Float, default=0)
+    runecrafting_exp=db.Column(db.Float, default=0)
+    runecrafting_level=db.Column(db.Float, default=0)
+    taming_exp=db.Column(db.Float, default=0)
+    taming_level=db.Column(db.Float, default=0)
+    carpentry_exp=db.Column(db.Float, default=0)
+    carpentry_level=db.Column(db.Float, default=0)
+    social_exp=db.Column(db.Float, default=0)
+    social_level=db.Column(db.Float, default=0)
+    catacombs_exp=db.Column(db.Float, default=0)
+    catacombs_level=db.Column(db.Float, default=0)
+    grind_level=db.Column(db.Float, default=1)
+    base_health=db.Column(db.Float, default=100)
+    health=db.Column(db.Float, default=100)
+    base_defense=db.Column(db.Float, default=0)
+    defense=db.Column(db.Float, default=0)
+    truedefese=db.Column(db.Float, default=0)
+    base_strength=db.Column(db.Float, default=0)
+    strength=db.Column(db.Float, default=0)
+    critchance=db.Column(db.Float, default=0.3)
+    critdamage=db.Column(db.Float, default=1.5)
+    intellegence=db.Column(db.Float, default=0)
+    miningspeed=db.Column(db.Float, default=0)
+    seacreaturechance=db.Column(db.Float, default=0.2)
+    magicfind=db.Column(db.Float, default=0)
+    petluck=db.Column(db.Float, default=0)
+    abilitydamage=db.Column(db.Float, default=0)
+    ferocity=db.Column(db.Float, default=0)
+    miningfortune=db.Column(db.Float, default=0)
+    farmingfortune=db.Column(db.Float, default=0)
+    foragingfortune=db.Column(db.Float, default=0)
+    sword_used=db.Column(db.String(255), nullable=True, default=None)
+    bow_used=db.Column(db.String(255), nullable=True, default=None)
+    arrow_used=db.Column(db.String(255), nullable=True, default=None)
+    arrow_bonus=db.Column(db.Float, default=0)
+    bpc=db.Column(db.Float, default=2000)
+    waiting=db.Column(db.Boolean, nullable=True, default=None)
+    reforge = db.Column(db.String(255), nullable=True, default='None')
+    rarity = db.Column(db.Float, default=0)
+    pickaxe=db.Column(db.String(255), nullable=True, default='None')
+    pickaxe_speed=db.Column(db.Float, default=0)
 
-@app.route('/', methods=['POST', 'GET'])
+
+@app.route('/', methods=['GET', 'POST'])
 def start():
+    if request.method == 'POST':
+        username = request.form['username']
+        # Check if the user exists in the database
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            # Create a new user if not exists
+            user = User(username=username)
+            db.session.add(user)
+            db.session.commit()
+        # Render the template with user's data
+        session["username"] = username
+        return render_template('hub.html', user=user)
     return render_template('start.html')
-
-@app.route('/start', methods=['POST', 'GET'])
-def main():
-    # Hub
-    #return render_template('aprilfools.html')
-    return render_template('hub.html', coins=coins, bits=bits, gl = grind_level)
 
 # Rank system
 @app.route('/rank', methods=['POST', 'GET'])
 def ranks():
-    global rank
+    rank = User.query.get(session["username"]).rank
     return render_template('ranks.html', rank=rank)
 
 @app.route('/vip', methods=['POST', 'GET'])
 def vip():
-    global rank
+    rank = User.query.get(session["username"]).rank
     if rank != 'non':
         return '''You already have Vip or higher.<br>
     <a href="/rank">Back</a>'''
     else:
-        global coins, bits, bpc
+        coins = User.query.get(session["username"]).coins
+        bits = User.query.get(session["username"]).bits
+        bpc = User.query.get(session["username"]).bpc
         if coins >= 1000000:
             coins -= 1000000
             rank = 'vip'
             bits += 500
             bpc += 100
+            db.session.commit()
             return '''You purchased Vip!<br>
     <a href="/rank">Back</a>'''
         else:
             return '''You cannot afford Vip.<br>
     <a href="/rank">Back</a>'''
-
+    db.session.commit()
 @app.route('/vip+', methods=['POST', 'GET'])
 def vip2():
-    global rank
+    rank = User.query.get(session["username"]).rank
     if rank != 'non' and rank != 'vip':
         return '''You already have Vip+ or higher.<br>
     <a href="/rank">Back</a>'''
@@ -116,12 +127,15 @@ def vip2():
         return '''You must buy Vip before you buy Vip+.<br>
     <a href="/rank">Back</a>'''
     else:
-        global coins, bits, bpc
+        coins = User.query.get(session["username"]).coins
+        bits = User.query.get(session["username"]).bits
+        bpc = User.query.get(session["username"]).bp
         if coins >= 200000:
             coins -= 200000
             rank = 'vip+'
             bits += 1500
             bpc += 300
+            db.session.commit()
             return '''You purchased Vip+!<br>
     <a href="/rank">Back</a>'''
         else:
@@ -130,7 +144,7 @@ def vip2():
 
 @app.route('/mvp', methods=['POST', 'GET'])
 def mvp():
-    global rank
+    rank = User.query.get(session["username"]).rank
     if rank != 'non' and rank != 'vip' and rank != 'vip+':
         return '''You already have Mvp or higher.<br>
     <a href="/rank">Back</a>'''
@@ -138,12 +152,15 @@ def mvp():
         return '''You must buy Vip+ before you buy Mvp.<br>
     <a href="/rank">Back</a>'''
     else:
-        global coins, bits, bpc
+        coins = User.query.get(session["username"]).coins
+        bits = User.query.get(session["username"]).bits
+        bpc = User.query.get(session["username"]).bpc
         if coins >= 500000:
             coins -= 500000
             rank = 'mvp'
             bits += 2500
             bpc += 500
+            db.session.commit()
             return '''You purchased Mvp!<br>
     <a href="/rank">Back</a>'''
         else:
@@ -152,7 +169,7 @@ def mvp():
 
 @app.route('/mvp+', methods=['POST', 'GET'])
 def mvp2():
-    global rank
+    rank = User.query.get(session["username"]).rank
     if rank == 'mvp+' or rank == 'mvp++' or rank == 'youtuber':
         return '''You already have Mvp+ or higher.<br>
     <a href="/rank">Back</a>'''
@@ -160,12 +177,15 @@ def mvp2():
         return '''You must buy Mvp before you buy Mvp+.<br>
     <a href="/rank">Back</a>'''
     else:
-        global coins, bits, bpc
+        coins = User.query.get(session["username"]).coins
+        bits = User.query.get(session["username"]).bits
+        bpc = User.query.get(session["username"]).bpc
         if coins >= 1000000:
             coins -= 1000000
             rank = 'mvp+'
             bits += 5000
             bpc += 1000
+            db.session.commit()
             return '''You purchased Mvp+!<br>
     <a href="/rank">Back</a>'''
         else:
@@ -174,7 +194,7 @@ def mvp2():
 
 @app.route('/mvp++', methods=['POST', 'GET'])
 def mvp3():
-    global rank
+    rank = User.query.get(session["username"]).rank
     if rank == 'mvp++' or rank == 'youtuber':
         return '''You already have Mvp++ or higher.<br>
     <a href="/rank">Back</a>'''
@@ -182,12 +202,15 @@ def mvp3():
         return '''You must buy Mvp+ before you buy Mvp++.<br>
     <a href="/rank">Back</a>'''
     else:
-        global coins, bits, bpc
+        coins = User.query.get(session["username"]).coins
+        bits = User.query.get(session["username"]).bits
+        bpc = User.query.get(session["username"]).bpc
         if coins >= 2000000:
             coins -= 2000000
             rank = 'mvp++'
             bits += 10000
             bpc += 2000
+            db.session.commit()
             return '''You purchased Mvp++!<br>
     <a href="/rank">Back</a>'''
         else:
@@ -196,9 +219,12 @@ def mvp3():
 
 @app.route('/youtube', methods=['POST', 'GET'])
 def youtube():
-    global rank, bits, bpc, waiting
+    rank = User.query.get(session["username"]).rank
+    bits = User.query.get(session["username"]).bits
+    bpc = User.query.get(session["username"]).bpc
+    waiting = User.query.get(session["username"]).waiting
     if waiting is True:
-        seconds = 300
+        seconds = 86400
         while seconds != 0:
             time.sleep(1)
             seconds-=1
@@ -210,30 +236,39 @@ def youtube():
     elif rank != "mvp++":
         return '''You must buy Mvp++ before you get youtuber rank.<br>
                <a href="/rank">Back</a>'''
-    password = input('What is the password: \n')
-    if password == 'MK':
+    password = input(f'''
+                User from {request.remote_addr} with Username {session["username"]}
+                requested youtuber rank
+                Please enter admin passowrd: ''')
+    if password == app.config['ADMIN_PW']:
         rank = 'youtuber'
         bits += 50000
         bpc += 3000
+        db.session.commit()
         return '''Sucessfully given you "youtuber" rank.<br>
                   <a href="/rank">Back</a>'''
-    elif password != None and password != 'MK':
+    elif password is not None and password != app.config['ADMIN_PW']:
         waiting = True
         return '''Sorry, the admin entered the wrong password. Rejected. Try again later.<br>
                <a href="/rank">Back</a>'''
-    return '''Wait for the owner to enter the password.<br>
+    return '''Wait for the admin to enter the password.<br>
               <a href="/rank">Back</a>'''
 
 @app.route('/sellbits', methods=['POST', 'GET'])
 def sellbits():
+    bits = User.query.get(session["username"]).bits
+    bpc = User.query.get(session["username"]).bpc
     return render_template('bit.html', bpc=bpc, bits=bits)
 
 @app.route('/combatbuybits', methods=['POST', 'GET'])
 def combatbuy():
-    global bits, combat_level
+    global combat_level
+    bits = User.query.get(session["username"]).bits
+    combat_level = User.query.get(session["username"]).combat_level
     if bits >= 5000:
         bits -= 5000
         combat_level += 1
+        db.session.commit()
         return '''Your purchase was sucssesful<br>
                   <a href="/sellbits">Back</a>'''
     else:
@@ -242,10 +277,12 @@ def combatbuy():
 
 @app.route('/combatbuybits2', methods=['POST', 'GET'])
 def combatbuy2():
-    global bits, combat_level
+    bits = User.query.get(session["username"]).bits
+    combat_level = User.query.get(session["username"]).combat_level
     if bits >= 15000:
         bits -= 15000
         combat_level += 4
+        db.session.commit()
         return '''Your purchase was sucssesful<br>
                   <a href="/sellbits">Back</a>'''
     else:
@@ -254,10 +291,12 @@ def combatbuy2():
 
 @app.route('/cookie', methods=['POST', 'GET'])
 def cookie_buy():
-    global coins, bits
+    coins = User.query.get(session["username"]).coins
+    bits = User.query.get(session["username"]).bits
     if coins >= 300000:
         coins -= 300000
         bits += bpc
+        db.session.commit()
         return '''Sucssfully given you bits.<br>
                <a href="/sellbits">Back</a>'''
     else:
@@ -267,11 +306,24 @@ def cookie_buy():
 # Weaponsmith
 @app.route('/weaponsmith', methods=['POST', 'GET'])
 def weapon_smith():
+    sword_used = User.query.get(session["username"]).sword_used
+    arrow_used = User.query.get(session["username"]).arrow_used
+    bow_used = User.query.get(session["username"]).bow_used
+    pickaxe = User.query.get(session["username"]).pickaxe
+    combat_level = User.query.get(session["username"]).combat_level
+    strength = User.query.get(session["username"]).strength
     return render_template('weaponsmith.html', su=sword_used, ar=arrow_used, bow=bow_used, pickaxe=pickaxe, combat_level=combat_level, st=strength)
 
 @app.route('/us', methods=['POST', 'GET'])
 def us():
-    global coins, strength, sword_used, bow_used, arrow_used, rarity
+    sword_used = User.query.get(session["username"]).sword_used
+    arrow_used = User.query.get(session["username"]).arrow_used
+    bow_used = User.query.get(session["username"]).bow_used
+    strength = User.query.get(session["username"]).strength
+    coins = User.query.get(session["username"]).coins
+    rarity = User.query.get(session["username"]).rarity
+
+
     if sword_used == 'undead_sword':
         return '''You already have the undead sword equipped.<br>
                <a href="/weaponsmith">Back</a>'''
@@ -282,6 +334,7 @@ def us():
         bow_used = None
         arrow_used = None
         rarity = 1
+        db.session.commit()
         return '''You purchased the undead sword!<br>
                <a href="/weaponsmith">Back</a>'''
     else:
@@ -290,7 +343,12 @@ def us():
 
 @app.route('/es', methods=['POST', 'GET'])
 def es():
-    global coins, strength, sword_used, bow_used, arrow_used,rarity
+    word_used = User.query.get(session["username"]).sword_used
+    arrow_used = User.query.get(session["username"]).arrow_used
+    bow_used = User.query.get(session["username"]).bow_used
+    strength = User.query.get(session["username"]).strength
+    coins = User.query.get(session["username"]).coins
+    rarity = User.query.get(session["username"]).rarity
     if sword_used == 'end_sword':
         return '''You already have the end sword equipped.<br>
                <a href="/weaponsmith">Back</a>'''
@@ -301,6 +359,7 @@ def es():
         bow_used = None
         arrow_used = None
         rarity = 2
+        db.session.commit()
         return '''You purchased the end sword!<br>
                <a href="/weaponsmith">Back</a>'''
     else:
